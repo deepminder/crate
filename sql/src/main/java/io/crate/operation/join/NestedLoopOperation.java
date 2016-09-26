@@ -327,9 +327,8 @@ public class NestedLoopOperation implements CompletionListenable {
                 LOGGER.trace("phase={} side=left method=setNextRow stop=true", phaseId);
                 return Result.STOP;
             }
-            // no need to materialize as it will be used before upstream is resumed
-            // TODO: is this really safe?
-            lastRow = row;
+            // We need to materialize since the row can be mutated by the Collector (case of self join)
+            lastRow = new RowN(row.materialize());;
             if (firstCall) {
                 firstCall = false;
                 if (leadAcquired.compareAndSet(false, true)) {

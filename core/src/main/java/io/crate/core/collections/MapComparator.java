@@ -49,6 +49,13 @@ public class MapComparator implements Comparator<Map> {
         for (Map.Entry<K, V> entry : m1.entrySet()) {
             V thisValue = entry.getValue();
             V otherValue = m2.get(entry.getKey());
+            if (thisValue == null) {
+                if (otherValue != null) {
+                    return 1;
+                } else {
+                    continue;
+                }
+            }
             if (!thisValue.equals(otherValue)) {
                 if (!thisValue.getClass().equals(otherValue.getClass())) {
                     DataType leftType = DataTypes.guessType(thisValue);

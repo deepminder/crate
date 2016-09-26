@@ -342,6 +342,24 @@ public class JoinIntegrationTest extends SQLTransportIntegrationTest {
     }
 
     @Test
+    public void testFilteredSelfJoinWithFilterOnBothRelations() {
+        execute("create table test(id long primary key, num long, txt string) with (number_of_replicas=1)");
+        // The same test is run also by JoinSingleNodeIntegrationTest
+        if (internalCluster().numDataNodes() > 1) {
+            ensureGreen();
+        } else {
+            ensureYellow();
+        }
+
+        execute("insert into test(id, num, txt) values(1, 1, '1111'), (2, 2, '2222'), (3, 1, '2222'), (4, 2, '2222')");
+        execute("refresh table test");
+
+        execute("select t1.id, t2.id from test as t1 inner join test as t2 on t1.num = t2.num " +
+                "where t1.txt = '1111' and t2.txt='2222'");
+        assertThat(TestingHelpers.printedTable(response.rows()), is("1| 3\n"));
+    }
+
+    @Test
     public void testFilteredJoin() throws Exception {
         execute("create table employees (size float, name string)");
         execute("create table offices (height float, name string)");
@@ -492,7 +510,7 @@ public class JoinIntegrationTest extends SQLTransportIntegrationTest {
     }
 
     @Test
-    public void testFetchArrayAndAnalyedColumnsWithJoin() throws Exception {
+    public void testFetchArrayAndAnalyzedColumnsWithJoin() throws Exception {
         execute("create table t1 (id int primary key, text string index using fulltext)");
         execute("create table t2 (id int primary key, tags array(string))");
         ensureYellow();

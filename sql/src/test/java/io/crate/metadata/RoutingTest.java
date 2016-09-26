@@ -23,15 +23,15 @@ package io.crate.metadata;
 
 import com.google.common.collect.ImmutableMap;
 import io.crate.test.integration.CrateUnitTest;
+import io.crate.testing.TestingHelpers;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 
 public class RoutingTest extends CrateUnitTest {
@@ -63,5 +63,45 @@ public class RoutingTest extends CrateUnitTest {
         StreamInput in = StreamInput.wrap(out.bytes());
         Routing routing2 = Routing.fromStream(in);
         assertThat(routing1.locations(), is(routing2.locations()));
+    }
+
+    @Test
+    public void testUpdateLocations() {
+        Map<String, Map<String, List<Integer>>> exitingLocations = new TreeMap<>();
+        Map<String, List<Integer>> indexMapExisting = new TreeMap<>();
+        indexMapExisting.put("index-0", Arrays.asList(1, 2));
+        indexMapExisting.put("index-1", Arrays.asList(1, 2));
+        exitingLocations.put("node-0", indexMapExisting);
+        indexMapExisting = new TreeMap<>();
+        indexMapExisting.put("index-0", Arrays.asList(3, 4));
+        indexMapExisting.put("index-1", Arrays.asList(3, 4));
+        exitingLocations.put("node-1", indexMapExisting);
+
+        Routing routing = new Routing(exitingLocations);
+        routing.updateLocations(exitingLocations);
+        // Same locations must be returned
+        assertThat(exitingLocations, is(routing.locations()));
+
+        Map<String, Map<String, List<Integer>>> newLocations = new TreeMap<>();
+        Map<String, List<Integer>> indexMapNew = new TreeMap<>();
+        indexMapNew.put("index-0", Arrays.asList(3, 4, 5));
+        indexMapNew.put("index-1", Arrays.asList(3, 4, 5));
+        newLocations.put("node-0", indexMapNew);
+        indexMapNew = new TreeMap<>();
+        indexMapNew.put("index-0", Arrays.asList(1, 2, 5));
+        indexMapNew.put("index-1", Arrays.asList(1, 2, 5));
+        newLocations.put("node-1", indexMapNew);
+
+        routing = new Routing(newLocations);
+        routing.updateLocations(exitingLocations);
+
+        // Merged locations must be returned
+        assertThat(routing.locations().keySet(), containsInAnyOrder("node-0", "node-1"));
+        assertThat(routing.locations().get("node-0").keySet(), containsInAnyOrder("index-0", "index-1"));
+        assertThat(routing.locations().get("node-1").keySet(), containsInAnyOrder("index-0", "index-1"));
+        assertThat(routing.locations().get("node-0").get("index-0"), containsInAnyOrder(1, 2, 5));
+        assertThat(routing.locations().get("node-0").get("index-1"), containsInAnyOrder(1, 2, 5));
+        assertThat(routing.locations().get("node-1").get("index-0"), containsInAnyOrder(3, 4, 5));
+        assertThat(routing.locations().get("node-1").get("index-1"), containsInAnyOrder(3, 4, 5));
     }
 }

@@ -5,6 +5,10 @@ Changes for Crate
 Unreleased
 ==========
 
+ - Fix: An issue on self joins when columns from both relations are
+   used in where clause.
+   E.g. FROM table t1, table t2 WHERE t1.col = 'foo' and t2.col = 'bar';
+
  - Fix: The ``count`` aggregation function counts null values.
    E.g. count(cast(null as string))
 
