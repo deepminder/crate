@@ -32,8 +32,7 @@ is as follows:
 
 - The FROM item points to the table where the data should be retrieved
   from. If no FROM item is specified, the query is instead executed against
-  ``sys.cluster``. This is so that queries that are commonly used in connection
-  tests that require no tables, such as ``SELECT 1 as one``, can be evaluated.
+  :ref:`sys.cluster <sys-cluster>`.
 
 - If the WHERE clause is specified, all rows that do not satisfy the
   condition are eliminated from the output. (See WHERE Clause below.)
