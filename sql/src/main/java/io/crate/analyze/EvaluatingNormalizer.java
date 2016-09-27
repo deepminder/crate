@@ -30,8 +30,8 @@ import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -114,25 +114,36 @@ public class EvaluatingNormalizer {
         public Symbol visitMatchPredicate(MatchPredicate matchPredicate, StmtCtx context) {
             if (fieldResolver != null) {
                 // Once the fields can be resolved, rewrite matchPredicate to function
-                Map<Field, Double> fieldBoostMap = matchPredicate.identBoostMap();
-                Map<String, Object> fqnBoostMap = new HashMap<>(fieldBoostMap.size());
+                Map<Field, Symbol> fieldBoostMap = matchPredicate.identBoostMap();
+                Map<String, Symbol> options = matchPredicate.options();
+                List<Symbol> args = new ArrayList<>();
 
-                for (Map.Entry<Field, Double> entry : fieldBoostMap.entrySet()) {
+                args.add(matchPredicate.queryTerm());
+                args.add(Literal.of(matchPredicate.matchType()));
+                args.add(getOrDefault(options, "analyzer", Literal.NULL));
+                args.add(getOrDefault(options, "boost", Literal.NULL));
+                args.add(getOrDefault(options, "cutoff_frequency", Literal.NULL));
+                args.add(getOrDefault(options, "fuzziness", Literal.NULL));
+                args.add(getOrDefault(options, "fuzzy_rewrite", Literal.NULL));
+                args.add(getOrDefault(options, "max_expansions", Literal.NULL));
+                args.add(getOrDefault(options, "minimum_should_match", Literal.NULL));
+                args.add(getOrDefault(options, "operator", Literal.NULL));
+                args.add(getOrDefault(options, "prefix_length", Literal.NULL));
+                args.add(getOrDefault(options, "rewrite", Literal.NULL));
+                args.add(getOrDefault(options, "slop", Literal.NULL));
+                args.add(getOrDefault(options, "tie_breaker", Literal.NULL));
+                args.add(getOrDefault(options, "zero_terms_query", Literal.NULL));
+
+                for (Map.Entry<Field, Symbol> entry : fieldBoostMap.entrySet()) {
                     Symbol resolved = process(entry.getKey(), null);
                     if (resolved instanceof Reference) {
-                        fqnBoostMap.put(((Reference) resolved).ident().columnIdent().fqn(), entry.getValue());
+                        args.add(resolved);
+                        args.add(entry.getValue());
                     } else {
                         return matchPredicate;
                     }
                 }
-
-                return new Function(
-                    io.crate.operation.predicate.MatchPredicate.INFO,
-                    Arrays.<Symbol>asList(
-                        Literal.of(fqnBoostMap),
-                        Literal.of(matchPredicate.columnType(), matchPredicate.queryTerm()),
-                        Literal.of(matchPredicate.matchType()),
-                        Literal.of(matchPredicate.options())));
+                return io.crate.operation.predicate.MatchPredicate.createSymbol(args);
             }
             return matchPredicate;
         }
@@ -171,6 +182,14 @@ public class EvaluatingNormalizer {
         protected Symbol visitSymbol(Symbol symbol, StmtCtx context) {
             return symbol;
         }
+    }
+
+    private Symbol getOrDefault(Map<String, Symbol> map, String key, Symbol defaultValue) {
+        Symbol symbol = map.get(key);
+        if (symbol == null) {
+            return defaultValue;
+        }
+        return symbol;
     }
 
     private class CopyingVisitor extends BaseVisitor {

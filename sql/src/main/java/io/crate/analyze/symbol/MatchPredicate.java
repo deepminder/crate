@@ -38,17 +38,17 @@ public class MatchPredicate extends Symbol {
         }
     };
 
-    private final Map<Field, Double> identBoostMap;
+    private final Map<Field, Symbol> identBoostMap;
     private final DataType columnType;
-    private final Object queryTerm;
+    private final Symbol queryTerm;
     private final String matchType;
-    private final Map<String, Object> options;
+    private final Map<String, Symbol> options;
 
-    public MatchPredicate(Map<Field, Double> identBoostMap,
+    public MatchPredicate(Map<Field, Symbol> identBoostMap,
                           DataType columnType,
-                          Object queryTerm,
+                          Symbol queryTerm,
                           String matchType,
-                          Map<String, Object> options) {
+                          Map<String, Symbol> options) {
         this.identBoostMap = identBoostMap;
         this.columnType = columnType;
         this.queryTerm = queryTerm;
@@ -56,11 +56,11 @@ public class MatchPredicate extends Symbol {
         this.options = options;
     }
 
-    public Map<Field, Double> identBoostMap() {
+    public Map<Field, Symbol> identBoostMap() {
         return identBoostMap;
     }
 
-    public Object queryTerm() {
+    public Symbol queryTerm() {
         return queryTerm;
     }
 
@@ -68,7 +68,7 @@ public class MatchPredicate extends Symbol {
         return matchType;
     }
 
-    public Map<String, Object> options() {
+    public Map<String, Symbol> options() {
         return options;
     }
 

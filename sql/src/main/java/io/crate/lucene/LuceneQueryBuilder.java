@@ -642,11 +642,14 @@ public class LuceneQueryBuilder {
             @Override
             public Query apply(Function input, Context context) throws IOException {
                 List<Symbol> arguments = input.arguments();
-                assert arguments.size() == 4 : "invalid number of arguments";
-                assert Symbol.isLiteral(arguments.get(0), DataTypes.OBJECT); // fields
-                assert Symbol.isLiteral(arguments.get(2), DataTypes.STRING); // matchType
+                Symbol queryTerm = arguments.get(0);
+                Symbol matchType = arguments.get(1);
+                Symbol analyzer = arguments.get(2);
+                Symbol boost = arguments.get(3);
+                Symbol cutoffFrequency = arguments.get(3);
+                
+                // TODO:
 
-                Symbol queryTerm = arguments.get(1);
                 if (queryTerm.valueType().equals(DataTypes.GEO_SHAPE)) {
                     return geoMatch(context, arguments, queryTerm);
                 }
