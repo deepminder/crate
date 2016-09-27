@@ -1928,6 +1928,20 @@ public class TransportSQLActionTest extends SQLTransportIntegrationTest {
         assertThat(response.cols(), is(arrayContaining("\"")));
         assertThat((String) response.rows()[0][0], is("'"));
     }
+
+    @Test
+    public void testFoo() throws Exception {
+        execute("create table t (b boolean, x int)");
+        ensureYellow();
+        execute("insert into t (b, x) values (true, 10), (false, 20), (null, null)");
+        execute("refresh table t");
+
+        //execute("select b from t where not b");
+        //assertThat(response.rowCount(), is(1L));
+
+        execute("select x from t where not (x = 10)");
+        assertThat(response.rowCount(), is(1L));
+    }
 }
 
 

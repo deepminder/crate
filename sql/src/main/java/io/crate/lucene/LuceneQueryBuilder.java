@@ -41,6 +41,7 @@ import io.crate.geo.GeoJSONUtils;
 import io.crate.lucene.match.MatchQueryBuilder;
 import io.crate.lucene.match.MultiMatchQueryBuilder;
 import io.crate.metadata.DocReferenceConverter;
+import io.crate.metadata.FunctionInfo;
 import io.crate.metadata.Functions;
 import io.crate.metadata.Reference;
 import io.crate.metadata.doc.DocSysColumns;
@@ -460,7 +461,37 @@ public class LuceneQueryBuilder {
             public Query apply(Function input, Context context) {
                 assert input != null;
                 assert input.arguments().size() == 1;
-                return Queries.not(process(input.arguments().get(0), context));
+                /**
+                 * not null -> null     -> no match
+                 * not true -> false    -> no match
+                 * not false -> true    -> match
+                 */
+
+                // handles not true / not false
+                Symbol arg = input.arguments().get(0);
+                Query innerQuery = process(arg, context);
+                Query notX = Queries.not(innerQuery);
+
+                // not x =  not x & x is not null
+                BooleanQuery.Builder builder = new BooleanQuery.Builder();
+                builder.add(notX, BooleanClause.Occur.MUST);
+                builder.add(isNotNull(arg, context), BooleanClause.Occur.MUST);
+
+                return builder.build();
+            }
+
+            private Query isNotNull(Symbol arg, Context context) {
+                if (arg instanceof Reference) {
+                    Reference reference = (Reference) arg;
+                    String columnName = reference.ident().columnIdent().fqn();
+                    QueryBuilderHelper builderHelper = QueryBuilderHelper.forType(reference.valueType());
+                    return builderHelper.rangeQuery(columnName, null, null, true, true);
+                }
+
+                // TODO: optimize by retrieving all references inside arg and build range queries
+                FunctionInfo isNullInfo = IsNullPredicate.generateInfo(Collections.singletonList(arg.valueType()));
+                Function isNullFunction = new Function(isNullInfo, Collections.singletonList(arg));
+                return Queries.not(genericFunctionFilter(isNullFunction, context));
             }
         }
 
