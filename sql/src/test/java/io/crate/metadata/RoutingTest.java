@@ -88,8 +88,8 @@ public class RoutingTest extends CrateUnitTest {
         indexMapNew.put("index-1", Arrays.asList(3, 4, 5));
         newLocations.put("node-0", indexMapNew);
         indexMapNew = new TreeMap<>();
-        indexMapNew.put("index-0", Arrays.asList(1, 2, 5));
-        indexMapNew.put("index-1", Arrays.asList(1, 2, 5));
+        indexMapNew.put("index-0", Arrays.asList(1, 2, 6));
+        indexMapNew.put("index-1", Arrays.asList(1, 2, 6));
         newLocations.put("node-1", indexMapNew);
 
         routing = new Routing(newLocations);
@@ -101,7 +101,7 @@ public class RoutingTest extends CrateUnitTest {
         assertThat(routing.locations().get("node-1").keySet(), containsInAnyOrder("index-0", "index-1"));
         assertThat(routing.locations().get("node-0").get("index-0"), containsInAnyOrder(1, 2, 5));
         assertThat(routing.locations().get("node-0").get("index-1"), containsInAnyOrder(1, 2, 5));
-        assertThat(routing.locations().get("node-1").get("index-0"), containsInAnyOrder(3, 4, 5));
-        assertThat(routing.locations().get("node-1").get("index-1"), containsInAnyOrder(3, 4, 5));
+        assertThat(routing.locations().get("node-1").get("index-0"), containsInAnyOrder(3, 4, 6));
+        assertThat(routing.locations().get("node-1").get("index-1"), containsInAnyOrder(3, 4, 6));
     }
 }

@@ -57,6 +57,9 @@ public class MapComparator implements Comparator<Map> {
                 }
             }
             if (!thisValue.equals(otherValue)) {
+                if (otherValue == null) {
+                    return -1;
+                }
                 if (!thisValue.getClass().equals(otherValue.getClass())) {
                     DataType leftType = DataTypes.guessType(thisValue);
                     int cmp = leftType.compareValueTo(thisValue, leftType.value(otherValue));

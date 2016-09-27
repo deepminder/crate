@@ -129,6 +129,16 @@ public class Routing implements Streamable {
         return false;
     }
 
+    /**
+     * Update the locations of the current routing by merging them with the locations
+     * that have been computed in an existing routing for the same table.
+     * <p>
+     * if a shard has been already routed in {@paramref existingLocations}
+     * then: use the existing node
+     * else: use the new node
+     *
+     * @param existingLocations Existing locations routed for the same table
+     */
     public void updateLocations(Map<String, Map<String, List<Integer>>> existingLocations) {
         if (existingLocations.equals(locations)) {
             return;
