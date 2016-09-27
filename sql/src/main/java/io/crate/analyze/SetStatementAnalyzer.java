@@ -40,23 +40,42 @@ public class SetStatementAnalyzer {
     private SetStatementAnalyzer() {}
 
     public static SetAnalyzedStatement analyze(SetStatement node, ParameterContext parameterContext) {
-        if (SetStatement.Scope.SESSION.equals(node.scope())) {
-            logger.debug("SET SESSION STATEMENT: {}", node.toString());
+
+        if (SetStatement.Scope.GLOBAL.equals(node.scope())) {
+            for (Assignment assignment : node.assignments()){
+                if (assignment.expression().equals(new QualifiedNameReference(new QualifiedName("default")))){
+                    throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                        "DEFAULT cannot be used with SET GLOBAL. To reset a setting use RESET."));
+                }
+            }
+
+        } else {
+            for (Assignment assignment : node.assignments()){
+                if (assignment.expressions().contains(new QualifiedNameReference(new QualifiedName("default"))) && assignment.expressions().size() > 1){
+                    throw new IllegalArgumentException(String.format(Locale.ENGLISH,
+                        "DEFAULT cannot be used in a list assignment"));
+                }
+            }
+
+
+            logger.debug("SET {} STATEMENT: {}",node.scope().toString() , node.toString());
+
         }
+
+
         Settings.Builder builder = Settings.builder();
         for (Assignment assignment : node.assignments()) {
             String settingsName = ExpressionToStringVisitor.convert(assignment.columnName(),
                     parameterContext.parameters());
 
-            if (SetStatement.Scope.SESSION.equals(node.scope())) {
-                builder.put(settingsName, assignment.expression());
-            } else {
+            if (SetStatement.Scope.GLOBAL.equals(node.scope())) {
                 SettingsApplier settingsApplier = CrateSettings.getSettingsApplier(settingsName);
                 for (String setting : ExpressionToSettingNameListVisitor.convert(assignment)) {
                     checkIfSettingIsRuntime(setting);
                 }
-
                 settingsApplier.apply(builder, parameterContext.parameters(), assignment.expression());
+            } else {
+                builder.put(settingsName, assignment.expressions());
             }
         }
         return new SetAnalyzedStatement(node.scope(), builder.build(),

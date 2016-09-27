@@ -56,9 +56,13 @@ public class SetAnalyzerTest extends BaseAnalyzerTest {
 
     @Test
     public void testSet() throws Exception {
-        SetAnalyzedStatement analysis = analyze("SET GLOBAL PERSISTENT stats.operations_log_size=1");
-        assertThat(analysis.isPersistent(), is(true));
+        SetAnalyzedStatement analysis = analyze("SET GLOBAL TRANSIENT stats.operations_log_size=1");
+        assertThat(analysis.isPersistent(), is(false));
         assertThat(analysis.settings().toDelimitedString(','), is("stats.operations_log_size=1,"));
+
+        analysis = analyze("SET GLOBAL TRANSIENT stats.jobs_log_size='1'");
+        assertThat(analysis.isPersistent(), is(false));
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=1,"));
 
         analysis = analyze("SET GLOBAL TRANSIENT stats.jobs_log_size=2");
         assertThat(analysis.isPersistent(), is(false));
@@ -71,6 +75,22 @@ public class SetAnalyzerTest extends BaseAnalyzerTest {
                 .put("stats.operations_log_size", 0)
                 .put("stats.jobs_log_size", 0)
                 .build()));
+
+        analysis = analyze("SET LOCAL stats.jobs_log_size TO 2");
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=[2],"));
+
+        analysis = analyze("SET stats.jobs_log_size TO 2");
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=[2],"));
+
+        analysis = analyze("SET SESSION stats.jobs_log_size = 1,2,3");
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=[1, 2, 3],"));
+
+
+        analysis = analyze("SET LOCAL stats.jobs_log_size TO DEFAULT");
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=[\"default\"],"));
+
+        analysis = analyze("SET stats.jobs_log_size = DEFAULT");
+        assertThat(analysis.settings().toDelimitedString(','), is("stats.jobs_log_size=[\"default\"],"));
     }
 
     @Test
@@ -110,6 +130,39 @@ public class SetAnalyzerTest extends BaseAnalyzerTest {
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage("'something' is not an allowed value. Allowed values are:");
         analyze("SET GLOBAL PERSISTENT cluster.graceful_stop.min_availability = 'something'");
+    }
+
+    @Test
+    public void testSetSessionInvalidArrayValue() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("DEFAULT cannot be used in a list assignment");
+        analyze("SET SESSION cluster.graceful_stop.min_availability = 1, DEFAULT");
+    }
+
+    @Test
+    public void testSetSessionInvalidStringParam() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        analyze("SET SESSION 'cluster.graceful_stop.min_availability' = 1");
+    }
+
+    @Test
+    public void testSetLocalInvalidStringParam() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        analyze("SET LOCAL 'cluster.graceful_stop.min_availability' = 1");
+    }
+
+    @Test
+    public void testSetLocalInvalidArrayValue() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("DEFAULT cannot be used in a list assignment");
+        analyze("SET LOCAL cluster.graceful_stop.min_availability TO DEFAULT, 1");
+    }
+
+    @Test
+    public void testSetGlobalDefault() throws Exception {
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("DEFAULT cannot be used with SET GLOBAL. To reset a setting use RESET.");
+        analyze("SET GLOBAL PERSISTENT cluster.graceful_stop.min_availability = DEFAULT");
     }
 
     @Test
